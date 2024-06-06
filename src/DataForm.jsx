@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from "react";
 import axios from 'axios';
 
-function DataForm() {
-    const [data, setData] = useState([]);
+function RecipeForm() {
+    const [recipes, setRecipes] = useState([]);
     const [name, setName] = useState('');
-    const [age, setAge] = useState('');
+    const [cuisine, setCuisine] = useState('');
+    const [ingredients, setIngredients] = useState('');
+    const [favorite, setFavorite] = useState(false);
     const [error, setError] = useState(null);
     const [editItem, setEditItem] = useState(null);
 
@@ -12,74 +14,83 @@ function DataForm() {
         axios
             .get('https://serverless-ulrich.netlify.app/.netlify/functions/api/')
             .then((response) => {
-                setData(response.data);
+                setRecipes(response.data);
             })
             .catch((error) => {
                 console.error('There was an error!', error);
+                setError('Failed to fetch recipes');
             });
     }, []);
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        if (!name || !age) {
-            setError('Name and age are required');
+        if (!name || !cuisine || !ingredients) {
+            setError('Name, cuisine, and ingredients are required');
             return;
         }
-
+    
         const url = editItem
             ? `https://serverless-ulrich.netlify.app/.netlify/functions/api/${editItem._id}`
             : 'https://serverless-ulrich.netlify.app/.netlify/functions/api/';
         const method = editItem ? 'put' : 'post';
-
-        // POST or PUT request
-        axios[method](url, { name, age })
+    
+        const recipeData = { name, cuisine, ingredients, favorite };
+    
+        axios[method](url, recipeData)
             .then((response) => {
                 console.log(response.data);
-
+    
                 if (editItem) {
-                    setData((prevData) =>
-                        prevData.map((item) =>
-                            item._id === editItem._id ? response.data : item
+                    // If editing, update the edited recipe in the state
+                    setRecipes((prevRecipes) =>
+                        prevRecipes.map((recipe) =>
+                            recipe._id === editItem._id ? response.data : recipe
                         )
                     );
                 } else {
-                    setData((prevData) => [...prevData, response.data]);
+                    // If adding a new recipe, append it to the existing list in the state
+                    setRecipes((prevRecipes) => [...prevRecipes, response.data]);
                 }
+                // Reset form fields and error message
                 setName('');
-                setAge('');
+                setCuisine('');
+                setIngredients('');
+                setFavorite(false);
                 setEditItem(null);
                 setError(null);
             })
             .catch((error) => {
                 console.error('There was an error!', error);
+                setError('There was an error submitting the data');
             });
     };
+    
 
     const handleEdit = (_id) => {
-        const itemToEdit = data.find((item) => item._id === _id);
-        setEditItem(itemToEdit);
-        setName(itemToEdit.name);
-        setAge(itemToEdit.age);
+        const recipeToEdit = recipes.find((recipe) => recipe._id === _id);
+        setEditItem(recipeToEdit);
+        setName(recipeToEdit.name);
+        setCuisine(recipeToEdit.cuisine);
+        setIngredients(recipeToEdit.ingredients);
+        setFavorite(recipeToEdit.favorite);
     };
 
     const handleDelete = (_id) => {
-        // DELETE request
         axios
-            .delete(
-                `https://serverless-ulrich.netlify.app/.netlify/functions/api/${_id}`
-            )
+            .delete(`https://serverless-ulrich.netlify.app/.netlify/functions/api/${_id}`)
             .then(() => {
-                setData((prevData) => prevData.filter((item) => item._id !== _id));
+                setRecipes((prevRecipes) => prevRecipes.filter((recipe) => recipe._id !== _id));
             })
             .catch((error) => {
                 console.error('There was an error!', error);
+                setError('There was an error deleting the recipe');
             });
     };
 
     return (
-        <div className="data-form-container">
+        <div className="recipe-form-container">
             <style>{`
-                .data-form-container {
+                .recipe-form-container {
                     max-width: 600px;
                     margin: 40px auto;
                     padding: 20px;
@@ -94,14 +105,14 @@ function DataForm() {
                     gap: 12px;
                     margin-bottom: 20px;
                 }
-                input {
+                input, textarea {
                     padding: 12px;
                     border: 1px solid #d0d0d0;
                     border-radius: 4px;
                     font-size: 16px;
                     transition: border-color 0.2s;
                 }
-                input:focus {
+                input:focus, textarea:focus {
                     border-color: #007bff;
                     outline: none;
                 }
@@ -145,7 +156,6 @@ function DataForm() {
                 }
                 .delete-button {
                     background-color: #dc3545;
-                }
                 .delete-button:hover {
                     background-color: #c82333;
                 }
@@ -161,24 +171,37 @@ function DataForm() {
                     type='text'
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder='Name'
+                    placeholder='Recipe Name'
                 />
                 <input
                     type='text'
-                    value={age}
-                    onChange={(e) => setAge(e.target.value)}
-                    placeholder='Age'
+                    value={cuisine}
+                    onChange={(e) => setCuisine(e.target.value)}
+                    placeholder='Cuisine'
                 />
-                <button type='submit'>{editItem ? 'Update Data' : 'Add Data'}</button>
+                <textarea
+                    value={ingredients}
+                    onChange={(e) => setIngredients(e.target.value)}
+                    placeholder='Ingredients (comma separated)'
+                />
+                <label>
+                    <input
+                        type='checkbox'
+                        checked={favorite}
+                        onChange={(e) => setFavorite(e.target.checked)}
+                    />
+                    Favorite
+                </label>
+                <button type='submit'>{editItem ? 'Update Recipe' : 'Add Recipe'}</button>
             </form>
             {error && <p>{error}</p>}
             <ul>
-                {data.map((item) => (
-                    <li key={item._id}>
-                        {item.name} - {item.age}
+                {recipes.map((recipe) => (
+                    <li key={recipe._id}>
+                        {recipe.name} - {recipe.cuisine}
                         <div className="button-group">
-                            <button className="edit-button" onClick={() => handleEdit(item._id)}>Edit</button>
-                            <button className="delete-button" onClick={() => handleDelete(item._id)}>Delete</button>
+                            <button className="edit-button" onClick={() => handleEdit(recipe._id)}>Edit</button>
+                            <button className="delete-button" onClick={() => handleDelete(recipe._id)}>Delete</button>
                         </div>
                     </li>
                 ))}
@@ -187,4 +210,4 @@ function DataForm() {
     );
 }
 
-export default DataForm;
+export default RecipeForm;
