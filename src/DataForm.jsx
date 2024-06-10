@@ -9,8 +9,13 @@ function RecipeForm() {
     const [favorite, setFavorite] = useState(false);
     const [error, setError] = useState(null);
     const [editItem, setEditItem] = useState(null);
+    const [viewItem, setViewItem] = useState(null); // State for viewing a recipe
 
     useEffect(() => {
+        fetchRecipes();
+    }, []);
+
+    const fetchRecipes = () => {
         axios
             .get('https://serverless-ulrich.netlify.app/.netlify/functions/api/')
             .then((response) => {
@@ -20,7 +25,7 @@ function RecipeForm() {
                 console.error('There was an error!', error);
                 setError('Failed to fetch recipes');
             });
-    }, []);
+    };
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -28,30 +33,18 @@ function RecipeForm() {
             setError('Name, cuisine, and ingredients are required');
             return;
         }
-    
+
         const url = editItem
             ? `https://serverless-ulrich.netlify.app/.netlify/functions/api/${editItem._id}`
             : 'https://serverless-ulrich.netlify.app/.netlify/functions/api/';
         const method = editItem ? 'put' : 'post';
-    
+
         const recipeData = { name, cuisine, ingredients, favorite };
-    
+
         axios[method](url, recipeData)
             .then((response) => {
                 console.log(response.data);
-    
-                if (editItem) {
-                    // If editing, update the edited recipe in the state
-                    setRecipes((prevRecipes) =>
-                        prevRecipes.map((recipe) =>
-                            recipe._id === editItem._id ? response.data : recipe
-                        )
-                    );
-                } else {
-                    // If adding a new recipe, append it to the existing list in the state
-                    setRecipes((prevRecipes) => [...prevRecipes, response.data]);
-                }
-                // Reset form fields and error message
+                fetchRecipes(); // Fetch updated list of recipes after adding/editing
                 setName('');
                 setCuisine('');
                 setIngredients('');
@@ -64,7 +57,6 @@ function RecipeForm() {
                 setError('There was an error submitting the data');
             });
     };
-    
 
     const handleEdit = (_id) => {
         const recipeToEdit = recipes.find((recipe) => recipe._id === _id);
@@ -79,7 +71,7 @@ function RecipeForm() {
         axios
             .delete(`https://serverless-ulrich.netlify.app/.netlify/functions/api/${_id}`)
             .then(() => {
-                setRecipes((prevRecipes) => prevRecipes.filter((recipe) => recipe._id !== _id));
+                fetchRecipes(); // Fetch updated list of recipes after deleting
             })
             .catch((error) => {
                 console.error('There was an error!', error);
@@ -87,17 +79,27 @@ function RecipeForm() {
             });
     };
 
+    const handleView = (_id) => {
+        const recipeToView = recipes.find((recipe) => recipe._id === _id);
+        setViewItem(recipeToView);
+    };
+
     return (
         <div className="recipe-form-container">
             <style>{`
+                body {
+                    background-color: #121212;
+                    font-family: Arial, sans-serif;
+                    color: #e0e0e0;
+                }
                 .recipe-form-container {
                     max-width: 600px;
                     margin: 40px auto;
                     padding: 20px;
-                    border: 1px solid #e0e0e0;
+                    border: 1px solid #333;
                     border-radius: 8px;
-                    background-color: #fff;
-                    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                    background-color: #1e1e1e;
+                    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
                 }
                 form {
                     display: flex;
@@ -107,27 +109,29 @@ function RecipeForm() {
                 }
                 input, textarea {
                     padding: 12px;
-                    border: 1px solid #d0d0d0;
+                    border: 1px solid #555;
                     border-radius: 4px;
                     font-size: 16px;
                     transition: border-color 0.2s;
+                    background-color: #2c2c2c;
+                    color: #e0e0e0;
                 }
                 input:focus, textarea:focus {
-                    border-color: #007bff;
+                    border-color: #888;
                     outline: none;
                 }
                 button {
                     padding: 12px;
                     border: none;
                     border-radius: 4px;
-                    background-color: #007bff;
+                    background-color: #333;
                     color: white;
                     font-size: 16px;
                     cursor: pointer;
                     transition: background-color 0.2s;
                 }
                 button:hover {
-                    background-color: #0056b3;
+                    background-color: #555;
                 }
                 ul {
                     list-style: none;
@@ -138,11 +142,13 @@ function RecipeForm() {
                     justify-content: space-between;
                     align-items: center;
                     padding: 10px;
-                    border-bottom: 1px solid #e0e0e0;
+                    border-bottom: 1px solid #444;
                     transition: background-color 0.2s;
+                    background-color: #2c2c2c;
+                    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
                 }
                 li:hover {
-                    background-color: #f9f9f9;
+                    background-color: #3a3a3a;
                 }
                 .button-group {
                     display: flex;
@@ -156,14 +162,34 @@ function RecipeForm() {
                 }
                 .delete-button {
                     background-color: #dc3545;
+                }
                 .delete-button:hover {
                     background-color: #c82333;
+                }
+                .view-button {
+                    background-color: #17a2b8;
+                }
+                .view-button:hover {
+                    background-color: #138496;
                 }
                 p {
                     color: #dc3545;
                     font-size: 14px;
                     margin-top: -10px;
                     margin-bottom: 20px;
+                }
+                .recipe-details {
+                    border-top: 1px solid #444;
+                    margin-top: 20px;
+                    padding-top: 20px;
+                    background-color: #1e1e1e;
+                    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+                    border-radius: 8px;
+                    padding: 20px;
+                }
+                .recipe-details h3 {
+                    margin-top: 0;
+                    color: #e0e0e0;
                 }
             `}</style>
             <form onSubmit={handleSubmit}>
@@ -200,12 +226,21 @@ function RecipeForm() {
                     <li key={recipe._id}>
                         {recipe.name} - {recipe.cuisine}
                         <div className="button-group">
+                            <button className="view-button" onClick={() => handleView(recipe._id)}>View</button>
                             <button className="edit-button" onClick={() => handleEdit(recipe._id)}>Edit</button>
                             <button className="delete-button" onClick={() => handleDelete(recipe._id)}>Delete</button>
                         </div>
                     </li>
                 ))}
             </ul>
+            {viewItem && (
+                <div className="recipe-details">
+                    <h3>{viewItem.name}</h3>
+                    <p><strong>Cuisine:</strong> {viewItem.cuisine}</p>
+                    <p><strong>Ingredients:</strong> {viewItem.ingredients}</p>
+                    <p><strong>Favorite:</strong> {viewItem.favorite ? 'Yes' : 'No'}</p>
+                </div>
+            )}
         </div>
     );
 }
